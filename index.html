@@ -18,7 +18,8 @@ h1 em{font-style:normal;background:linear-gradient(180deg,transparent 62%,rgba(2
 .lead{color:var(--sub);font-size:16px;line-height:1.7}
 .card{background:#fff;border:2px solid var(--line);border-radius:22px;box-shadow:0 14px 36px rgba(35,36,71,.08);padding:20px;margin-top:16px}
 .q{font-weight:900;font-size:18px;margin-bottom:12px}
-input[type=date]{width:100%;font:inherit;font-size:18px;font-weight:700;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:14px;padding:12px 14px}
+.bd{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px}
+.bd select{width:100%;min-width:0;-webkit-appearance:none;appearance:none;font:inherit;font-size:18px;font-weight:700;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:14px;padding:12px 6px;text-align:center;text-align-last:center}
 .opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .opts button{font:inherit;font-size:16px;font-weight:700;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:14px;padding:12px 6px;cursor:pointer}
 .opts button.on{background:var(--pu);border-color:var(--pu);color:#fff}
@@ -56,7 +57,7 @@ input[type=date]{width:100%;font:inherit;font-size:18px;font-weight:700;color:va
   <span class="pill">智慧服務業解析・課堂小活動</span>
   <h1>AI 今日點餐籤：<br>算出你今天<em>該吃什麼</em></h1>
   <p class="lead">輸入生日，AI 依你的星座、生肖和今日運勢，從德明周邊店家挑出你今天的幸運飲料與午餐。</p>
-  <div class="card"><p class="q">你的生日</p><input type="date" id="bd" min="1960-01-01"></div>
+  <div class="card"><p class="q">你的生日</p><div class="bd"><select id="by"><option value="">年</option></select><select id="bm"><option value="">月</option></select><select id="bdd"><option value="">日</option></select></div></div>
   <div class="card"><p class="q">性別</p><div class="opts" id="sex"><button>男</button><button>女</button><button>不想說</button></div></div>
   <button class="go" id="go" disabled>填好生日和性別就能算</button>
 </section>
@@ -187,10 +188,14 @@ const STEPS=['對照今日星象…','推算生肖流日…','掃描德明周邊
 const $=id=>document.getElementById(id);
 let sex='';
 const today=new Date();today.setHours(0,0,0,0);
-$('bd').max=today.toISOString().slice(0,10);
+const opt=(el,from,to,unit)=>{for(let v=from;from<to?v<=to:v>=to;v+=from<to?1:-1)el.add(new Option(v+unit,v));};
+opt($('by'),today.getFullYear(),1960,' 年');opt($('bm'),1,12,' 月');opt($('bdd'),1,31,' 日');
+$('by').value='2005'; // 大三大四多半這幾年出生，預設停在這裡少滑很多
+function bdv(){const y=+$('by').value,m=+$('bm').value,d=+$('bdd').value;if(!y||!m||!d)return null;
+  const t=new Date(y,m-1,d);return t.getMonth()===m-1&&t<=today?[y,m,d]:null;} // 擋 2/30 這類不存在的日期
 document.querySelectorAll('#sex button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#sex button').forEach(x=>x.classList.remove('on'));b.classList.add('on');sex=b.textContent;ready();});
-$('bd').oninput=ready;
-function ready(){const ok=$('bd').value&&sex;$('go').disabled=!ok;$('go').textContent=ok?'開始算':'填好生日和性別就能算';}
+['by','bm','bdd'].forEach(k=>$(k).onchange=ready);
+function ready(){const ok=bdv()&&sex;$('go').disabled=!ok;$('go').textContent=ok?'開始算':'填好生日和性別就能算';}
 
 function hash(s){let h=2166136261;for(const c of s)h=Math.imul(h^c.charCodeAt(0),16777619);h^=h>>>16;h=Math.imul(h,0x85ebca6b);h^=h>>>13;h=Math.imul(h,0xc2b2ae35);h^=h>>>16;return h>>>0;} // FNV＋收尾混洗，避免只差一個字的輸入抽到一樣
 const at=(arr,n)=>arr[n%arr.length];
@@ -203,7 +208,7 @@ $('go').onclick=()=>{
 };
 
 function show(){
-  const [y,m,d]=$('bd').value.split('-').map(Number);
+  const [y,m,d]=bdv();
   const born=new Date(y,m-1,d);
   const si=(d>=SIGN_START[m-1]?m:m-1)%12, sign=SIGN[si];
   const cny=CNY[y]||'0204', zy=(m*100+d<+cny)?y-1:y, zi=((zy-4)%12+12)%12, zod=ZOD[zi];
